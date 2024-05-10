@@ -46,15 +46,10 @@ def genHDRfromTXT(annFile, dataFile, pol):
                 GRDLines = line.split()[3]
                 print('Lines =', GRDLines)
                 headerPar['GRDLines'] = GRDLines
-            elif 'grd_mag.row_mult' in line:
-                GRDlatPixel = abs(float(line.split()[3].split(';')[0]))
-                print('PIXEL LAT SIZE = ', GRDlatPixel)
-                headerPar['GRDlatPixel'] = GRDlatPixel
-            elif 'grd_mag.col_mult' in line:
-                GRDlongPixel = abs(float(line.split()[3].split(';')[0]))
-                print('PIXEL LONG SIZE = ', GRDlongPixel)
-                headerPar['GRDlongPixel'] = GRDlongPixel
-
+            elif 'grd_pwr.row_mult' in line:
+                GRDPixel = abs(float(line.split()[3].split(';')[0]))
+                print('PIXEL SIZE = ', GRDPixel)
+                headerPar['GRDPixel'] = GRDPixel
     
     # ASSIGN NUMER OF LINES AND SAMPLES BASED UPON FILE TYPE
     #print('Reading lines...')
@@ -90,9 +85,9 @@ data type = {dataType}
 interleave = bsq
 sensor type = Unknown
 byte order = 0
-map info = {{Geographic Lat/Lon, 1.5, 1.5, {ULlongCord}, {ULlatCord}, {GRDlongPixel}, {GRDlatPixel}, WGS-84, units=Degrees}}
-coordinate system string = {{GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.017453292519943295]]}}
-wavelength units = Unknown\n'''.format(**headerPar)
+map info = {{Geographic Lat/Lon, 1.5, 1.5, {ULlongCord}, {ULlatCord}, {GRDPixel}, {GRDPixel}, WGS-84, units=Degrees}}
+coordinate system string = {{GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137,298.257223563]],PRIMEM["Greenwich",0],UNIT["Degree",0.017453292519943295]]}}
+wavelength units = Unknown'''.format(**headerPar)
     enviHDRFile.write(enviHDR)
     enviHDRFile.close()
     print('Output HDR file =', file)
