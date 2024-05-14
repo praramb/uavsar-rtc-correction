@@ -14,89 +14,83 @@ import argparse
     
 
 def genHDRfromTXT(annFile, dataFile, pol):
+    # Specify the format type
     format = 'GRD'
 
-    # Set up dictionary to hold header parameters
+    # Initialize a dictionary to hold header parameters
     headerPar = {}
 
-    file = annFile
-    fileBaseName = os.path.split(file)[-1]
-    fileBaseName = fileBaseName.replace('.txt','')
-    headerPar['fileBaseName']=fileBaseName
-    hdrFile = open(file, 'r')
-    for line in hdrFile:
-        if 'grd_mag.row_addr' in line:
-            ULlatCord = line.split()[3]
-            print('UPPER LEFT LAT = ', ULlatCord)
-            headerPar['ULlatCord'] = ULlatCord
-        elif 'grd_mag.col_addr' in line:
-            ULlongCord = line.split()[3]
-            print('UPPER LEFT LONG = ',ULlongCord)
-            headerPar['ULlongCord'] = ULlongCord
-    hdrFile.close()
+    # Extract the base name of the annotation file without the extension
+    fileBaseName = os.path.splitext(os.path.basename(annFile))[0]
+    headerPar['fileBaseName'] = fileBaseName
 
-    if format == 'GRD':
-        hdrFile = open(file, 'r')
+    # Open the annotation file and read its contents
+    with open(annFile, 'r') as hdrFile:
         for line in hdrFile:
-            if 'grd_pwr.set_rows' in line:
-                GRDSamples = line.split()[3]
-                print('SAMPLES =', GRDSamples)
-                headerPar['GRDSamples'] = GRDSamples
-            elif 'grd_pwr.set_cols' in line:
-                GRDLines = line.split()[3]
-                print('Lines =', GRDLines)
-                headerPar['GRDLines'] = GRDLines
-            elif 'grd_mag.row_mult' in line:
-                GRDlatPixel = abs(float(line.split()[3].split(';')[0]))
-                print('PIXEL LAT SIZE = ', GRDlatPixel)
-                headerPar['GRDlatPixel'] = GRDlatPixel
-            elif 'grd_mag.col_mult' in line:
-                GRDlongPixel = abs(float(line.split()[3].split(';')[0]))
-                print('PIXEL LONG SIZE = ', GRDlongPixel)
-                headerPar['GRDlongPixel'] = GRDlongPixel
+            # Extract and store the upper left latitude coordinate
+            if 'grd_mag.row_addr' in line:
+                headerPar['ULlatCord'] = line.split()[3]
+                print('UPPER LEFT LAT =', headerPar['ULlatCord'])
+            # Extract and store the upper left longitude coordinate
+            elif 'grd_mag.col_addr' in line:
+                headerPar['ULlongCord'] = line.split()[3]
+                print('UPPER LEFT LONG =', headerPar['ULlongCord'])
+            # Extract and store the number of samples if the format is 'GRD'
+            elif 'grd_pwr.set_rows' in line and format == 'GRD':
+                headerPar['GRDSamples'] = line.split()[3]
+                print('SAMPLES =', headerPar['GRDSamples'])
+            # Extract and store the number of lines if the format is 'GRD'
+            elif 'grd_pwr.set_cols' in line and format == 'GRD':
+                headerPar['GRDLines'] = line.split()[3]
+                print('LINES =', headerPar['GRDLines'])
+            # Extract and store the latitude pixel size if the format is 'GRD'
+            elif 'grd_mag.row_mult' in line and format == 'GRD':
+                headerPar['GRDlatPixel'] = abs(float(line.split()[3].split(';')[0]))
+                print('PIXEL LAT SIZE =', headerPar['GRDlatPixel'])
+            # Extract and store the longitude pixel size if the format is 'GRD'
+            elif 'grd_mag.col_mult' in line and format == 'GRD':
+                headerPar['GRDlongPixel'] = abs(float(line.split()[3].split(';')[0]))
+                print('PIXEL LONG SIZE =', headerPar['GRDlongPixel'])
 
-    
-    # ASSIGN NUMER OF LINES AND SAMPLES BASED UPON FILE TYPE
-    #print('Reading lines...')
-    if format == 'GRD':
-        if pol == 'HHHV':
-            dataType = 6
-        elif pol == 'HHVV':
-            dataType = 6
-        elif pol == 'HVVV':
-            dataType = 6
-        elif pol == 'HHHH':
-            dataType = 4
-        elif pol == 'HVHV':
-            dataType = 4
-        elif pol == 'VVVV':
-            dataType = 4
+    # Map the polarization to the appropriate data type
+    dataType_map = {
+        'HHHV': 6,
+        'HHVV': 6,
+        'HVVV': 6,
+        'HHHH': 4,
+        'HVHV': 4,
+        'VVVV': 4
+    }
 
-        print('DATATYPE = ', dataType)
-        headerPar['dataType'] = dataType
+    # Assign the data type based on the polarization
+    headerPar['dataType'] = dataType_map.get(pol, 4)
+    print('DATATYPE =', headerPar['dataType'])
 
-    #if args.input.endswith('.txt'):
-    file = dataFile + '.hdr'
+    # Construct the filename for the output HDR file
+    hdr_filename = f"{dataFile}.hdr"
     print('Writing output HDR file...')
-    enviHDRFile = open(file, 'w')
-    enviHDR = '''ENVI
-description = {{{fileBaseName}}}
-samples = {GRDLines}
-lines = {GRDSamples}
+
+    # Create the ENVI HDR content using the header parameters
+    enviHDR_content = f"""ENVI
+description = {{{headerPar['fileBaseName']}}}
+samples = {headerPar['GRDLines']}
+lines = {headerPar['GRDSamples']}
 bands = 1
 header offset = 0
 file type = ENVI Standard
-data type = {dataType}
+data type = {headerPar['dataType']}
 interleave = bsq
 sensor type = Unknown
 byte order = 0
-map info = {{Geographic Lat/Lon, 1.5, 1.5, {ULlongCord}, {ULlatCord}, {GRDlongPixel}, {GRDlatPixel}, WGS-84, units=Degrees}}
+map info = {{Geographic Lat/Lon, 1.5, 1.5, {headerPar['ULlongCord']}, {headerPar['ULlatCord']}, {headerPar['GRDlongPixel']}, {headerPar['GRDlatPixel']}, WGS-84, units=Degrees}}
 coordinate system string = {{GEOGCS["GCS_WGS_1984",DATUM["D_WGS_1984",SPHEROID["WGS_1984",6378137.0,298.257223563]],PRIMEM["Greenwich",0.0],UNIT["Degree",0.017453292519943295]]}}
-wavelength units = Unknown\n'''.format(**headerPar)
-    enviHDRFile.write(enviHDR)
-    enviHDRFile.close()
-    print('Output HDR file =', file)
+wavelength units = Unknown\n"""
 
+    # Write the ENVI HDR content to the output file
+    with open(hdr_filename, 'w') as enviHDRFile:
+        enviHDRFile.write(enviHDR_content)
+
+    print('Output HDR file =', hdr_filename)
     print('\nThank you for using UAVSAR.py\n')
 
 
